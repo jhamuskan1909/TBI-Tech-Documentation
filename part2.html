@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head><title>Countdown Timer - Part 2 (pause/resume + drift-proof)</title></head>
+<body>
+  <div id="timer">10:00</div>
+  <button id="startBtn">Start</button>
+  <button id="pauseBtn" disabled>Pause</button>
+
+  <script>
+    const DURATION = 600;     // 10 minutes in seconds
+    let remaining = DURATION; // accurate seconds-left snapshot, updated at each tick/pause
+    let endTime = null;       // wall-clock timestamp (ms) the timer should hit zero at
+    let intervalId = null;
+    let running = false;
+
+    function formatTime(totalSeconds) {
+      let s = Math.max(0, totalSeconds);
+      let minutes = Math.floor(s / 60);
+      let seconds = s % 60;
+      let secondsStr = seconds < 10 ? '0' + seconds : seconds;
+      return minutes + ":" + secondsStr;
+    }
+
+    function render() {
+      document.getElementById('timer').innerText = formatTime(remaining);
+    }
+
+    // Core drift fix: derive "remaining" from a real timestamp every tick,
+    // instead of trusting that exactly 1000ms passed since the last tick.
+    function tick() {
+      let secondsLeft = Math.round((endTime - Date.now()) / 1000);
+
+      if (secondsLeft <= 0) {
+        remaining = 0;
+        render();
+        stopTimer();
+        return;
+      }
+
+      remaining = secondsLeft;
+      render();
+    }
+
+    function stopTimer() {
+      clearInterval(intervalId);
+      intervalId = null;
+      running = false;
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('pauseBtn').disabled = true;
+      document.getElementById('pauseBtn').innerText = 'Pause';
+    }
+
+    function startTimer() {
+      if (running) return;
+      running = true;
+      endTime = Date.now() + remaining * 1000;
+      intervalId = setInterval(tick, 1000);
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('pauseBtn').disabled = false;
+      render();
+    }
+
+    function pauseResume() {
+      if (!running) return;
+
+      if (intervalId) {
+        // Pausing: snapshot the true remaining time, then stop ticking.
+        remaining = Math.max(0, Math.round((endTime - Date.now()) / 1000));
+        clearInterval(intervalId);
+        intervalId = null;
+        document.getElementById('pauseBtn').innerText = 'Resume';
+      } else {
+        // Resuming: rebuild endTime from the snapshot, restart ticking.
+        endTime = Date.now() + remaining * 1000;
+        intervalId = setInterval(tick, 1000);
+        document.getElementById('pauseBtn').innerText = 'Pause';
+      }
+    }
+
+    // If the tab was backgrounded (throttled ticks) or the laptop slept,
+    // correct the display the instant we regain focus, don't wait for
+    // the next interval fire.
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && running && intervalId) {
+        tick();
+      }
+    });
+
+    document.getElementById('startBtn').addEventListener('click', startTimer);
+    document.getElementById('pauseBtn').addEventListener('click', pauseResume);
+  </script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head><title>Countdown Timer - Part 1 (bugs fixed)</title></head>
+<body>
+  <div id="timer">10:00</div>
+  <button id="startBtn">Start</button>
+
+  <script>
+    let timeLeft = 600; // 10 minutes in seconds
+    let intervalId = null;
+
+    function updateDisplay() {
+      let minutes = Math.floor(timeLeft / 60);
+      let seconds = timeLeft % 60;
+      let secondsStr = seconds < 10 ? '0' + seconds : seconds; // Bug 2 fix: zero-pad
+      document.getElementById('timer').innerText = minutes + ":" + secondsStr;
+    }
+
+    function startTimer() {
+      if (intervalId !== null) return; // Bug 1 fix: don't stack a second interval
+
+      intervalId = setInterval(() => {
+        timeLeft--;
+
+        if (timeLeft <= 0) {           // Bug 3 fix: stop cleanly at zero
+          timeLeft = 0;
+          updateDisplay();
+          clearInterval(intervalId);
+          intervalId = null;
+          return;
+        }
+
+        updateDisplay();
+      }, 1000);
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startTimer);
+  </script>
+</body>
+</html>
